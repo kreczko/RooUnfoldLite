@@ -20,7 +20,8 @@ END_HTML */
 
 /////////////////////////////////////////////////////////////
 
-#include "RooUnfoldDagostini.h"
+#include "../interface/RooUnfoldDagostini.h"
+#include "../interface/RooUnfoldResponse.h"
 
 #include <iostream>
 
@@ -29,7 +30,6 @@ END_HTML */
 #include "TVectorD.h"
 #include "TMatrixD.h"
 
-#include "RooUnfoldResponse.h"
 
 using std::cout;
 using std::cerr;
@@ -67,7 +67,7 @@ RooUnfoldDagostini::RooUnfoldDagostini (const RooUnfoldDagostini& rhs)
 }
 
 RooUnfoldDagostini::RooUnfoldDagostini (const RooUnfoldResponse* res, const TH1* meas,
-                            Int_t niter, const char* name, const char* title)
+                            int niter, const char* name, const char* title)
   : RooUnfold (res, meas, name, title), _niter(niter)
 {
   // Constructor with response matrix object and measured unfolding input histogram.
@@ -111,7 +111,7 @@ RooUnfoldDagostini::Assign (const RooUnfoldDagostini& rhs)
 void
 RooUnfoldDagostini::Unfold()
 {
-  Int_t nt= _nt, nm= _nm;
+  int nt= _nt, nm= _nm;
   if (nt > SIZE_C) {
     cerr << nt << " truth bins is too large - maximum is "  << SIZE_C << endl;
     nt= SIZE_C;
@@ -125,31 +125,31 @@ RooUnfoldDagostini::Unfold()
   const TMatrixD& res= _res->Mresponse();
   const TVectorD& tru= _res->Vtruth();
   const TVectorD& meas= Vmeasured();
-  Double_t ntrue= 0;
-  for (Int_t i= 0; i < nt; i++) {
+  double ntrue= 0;
+  for (int i= 0; i < nt; i++) {
     bayesc_.pc[i]=    tru(i);
     bayesc_.nc_mc[i]= tru(i);
     ntrue +=  tru(i);
-    for (Int_t j= 0; j < nm; j++)
+    for (int j= 0; j < nm; j++)
       bayesc_.nec_mc[i][j]= tru(i) * res(j,i);
   }
 
-  Int_t ntf= nt;
+  int ntf= nt;
   if (_res->FakeEntries()) {
     TVectorD fakes= _res->Vfakes();
-    Double_t nfakes= fakes.Sum();
+    double nfakes= fakes.Sum();
     if (_verbose>=1) cout << "Add truth bin for " << nfakes << " fakes" << endl;
     ntf++;
     ntrue +=              nfakes;
     bayesc_.pc[ntf-1]=    nfakes;
     bayesc_.nc_mc[ntf-1]= nfakes;
-    for (Int_t j= 0; j < nm; j++)
+    for (int j= 0; j < nm; j++)
       bayesc_.nec_mc[ntf-1][j]= fakes[j];
   }
 
-  for (Int_t i= 0; i < ntf; i++)
+  for (int i= 0; i < ntf; i++)
     bayesc_.pc[i] /= ntrue;
-  for (Int_t j= 0; j < nm; j++)
+  for (int j= 0; j < nm; j++)
     bayesc_.ne[j]= meas(j);
 
   int mode= 2, er_mode= 20, keep= 0, ier= 0;
@@ -157,7 +157,7 @@ RooUnfoldDagostini::Unfold()
   if (ier != 0) cerr << "BAYES returned error " << ier << endl;
 
   _rec.ResizeTo (_nt);
-  for (Int_t i= 0; i < nt; i++)
+  for (int i= 0; i < nt; i++)
     _rec(i)= bayesc_.nc[i];
 
   _unfolded= true;
@@ -167,10 +167,10 @@ RooUnfoldDagostini::Unfold()
 void
 RooUnfoldDagostini::GetCov()
 {
-  Int_t nt= _nt < SIZE_C ? _nt : SIZE_C;
+  int nt= _nt < SIZE_C ? _nt : SIZE_C;
   _cov.ResizeTo(_nt,_nt);
-  for (Int_t i= 0; i < nt; i++)
-    for (Int_t j= 0; j < nt; j++)
+  for (int i= 0; i < nt; i++)
+    for (int j= 0; j < nt; j++)
       _cov(i,j)= bayesc_.Vc0_u[j][i];
   _haveCov= true;
 }

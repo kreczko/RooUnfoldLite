@@ -24,7 +24,7 @@ END_HTML */
 
 //#define OLDERRS   // restore old (incorrect) error calculation
 
-#include "RooUnfoldBayes.h"
+#include "../interface/RooUnfoldBayes.h"
 
 #include <iostream>
 #include <iomanip>
@@ -34,7 +34,7 @@ END_HTML */
 #include "TH1.h"
 #include "TH2.h"
 
-#include "RooUnfoldResponse.h"
+#include "../interface/RooUnfoldResponse.h"
 
 using std::min;
 using std::cerr;
@@ -54,7 +54,7 @@ RooUnfoldBayes::RooUnfoldBayes (const RooUnfoldBayes& rhs)
   CopyData (rhs);
 }
 
-RooUnfoldBayes::RooUnfoldBayes (const RooUnfoldResponse* res, const TH1* meas, Int_t niter, Bool_t smoothit,
+RooUnfoldBayes::RooUnfoldBayes (const RooUnfoldResponse* res, const TH1* meas, int niter, bool smoothit,
                                 const char* name, const char* title)
   : RooUnfold (res, meas, name, title), _niter(niter), _smoothit(smoothit)
 {
@@ -124,14 +124,14 @@ void RooUnfoldBayes::GetSettings()
     _defaultparm=4;
 }
 
-TMatrixD& RooUnfoldBayes::H2M (const TH2* h, TMatrixD& m, Bool_t overflow)
+TMatrixD& RooUnfoldBayes::H2M (const TH2* h, TMatrixD& m, bool overflow)
 {
   // TH2 -> TMatrixD
   if (!h) return m;
-  Int_t first= overflow ? 0 : 1;
-  Int_t nm= m.GetNrows(), nt= m.GetNcols();
-  for (Int_t j= 0; j < nt; j++)
-    for (Int_t i= 0; i < nm; i++)
+  int first= overflow ? 0 : 1;
+  int nm= m.GetNrows(), nt= m.GetNcols();
+  for (int j= 0; j < nt; j++)
+    for (int i= 0; i < nm; i++)
       m(i,j)= h->GetBinContent(i+first,j+first);
   return m;
 }
@@ -153,13 +153,13 @@ void RooUnfoldBayes::setup()
 
   if (_res->FakeEntries()) {
     TVectorD fakes= _res->Vfakes();
-    Double_t nfakes= fakes.Sum();
+    double nfakes= fakes.Sum();
     if (verbose()>=0) cout << "Add truth bin for " << nfakes << " fakes" << endl;
     _nc++;
     _nCi.ResizeTo(_nc);
     _nCi[_nc-1]= nfakes;
     _Nji.ResizeTo(_ne,_nc);
-    for (Int_t i= 0; i<_nm; i++) _Nji(i,_nc-1)= fakes[i];
+    for (int i= 0; i<_nm; i++) _Nji(i,_nc-1)= fakes[i];
   }
 
   _nbarCi.ResizeTo(_nc);
@@ -175,44 +175,44 @@ void RooUnfoldBayes::train()
   // _niter = number of iterations to perform (3 by default).
   // _smoothit = smooth the matrix in between iterations (default false).
 
-  Double_t ntrue = _nCi.Sum();
+  double ntrue = _nCi.Sum();
 
   // Initial distribution
   TVectorD P0C(_nCi);
   P0C *= 1.0/ntrue;
 
   TMatrixD PEjCi(_ne,_nc), PEjCiEff(_ne,_nc);
-  for (Int_t i = 0 ; i < _nc ; i++) {
+  for (int i = 0 ; i < _nc ; i++) {
     if (_nCi[i] <= 0.0) { _efficiencyCi[i] = 0.0; continue; }
-    Double_t eff = 0.0;
-    for (Int_t j = 0 ; j < _ne ; j++) {
-      Double_t response = _Nji(j,i) / _nCi[i];
+    double eff = 0.0;
+    for (int j = 0 ; j < _ne ; j++) {
+      double response = _Nji(j,i) / _nCi[i];
       PEjCi(j,i) = PEjCiEff(j,i) = response;  // efficiency of detecting the cause Ci in Effect Ej
       eff += response;
     }
     _efficiencyCi[i] = eff;
-    Double_t effinv = eff > 0.0 ? 1.0/eff : 0.0;   // reset PEjCiEff if eff=0
-    for (Int_t j = 0 ; j < _ne ; j++) PEjCiEff(j,i) *= effinv;
+    double effinv = eff > 0.0 ? 1.0/eff : 0.0;   // reset PEjCiEff if eff=0
+    for (int j = 0 ; j < _ne ; j++) PEjCiEff(j,i) *= effinv;
   }
 
-  for (Int_t kiter = 0 ; kiter < _niter; kiter++) {
+  for (int kiter = 0 ; kiter < _niter; kiter++) {
 
     if (verbose()>=1) cout << "Iteration : " << kiter << endl;
 
     TVectorD UjInv(_ne);
-    for (Int_t j = 0 ; j < _ne ; j++) {
-      Double_t Uj = 0.0;
-      for (Int_t i = 0 ; i < _nc ; i++)
+    for (int j = 0 ; j < _ne ; j++) {
+      double Uj = 0.0;
+      for (int i = 0 ; i < _nc ; i++)
         Uj += PEjCi(j,i) * P0C[i];
       UjInv[j] = Uj > 0.0 ? 1.0/Uj : 0.0;
     }
 
     // Unfolding matrix M
     _nbartrue = 0.0;
-    for (Int_t i = 0 ; i < _nc ; i++) {
-      Double_t nbarC = 0.0;
-      for (Int_t j = 0 ; j < _ne ; j++) {
-        Double_t Mij = UjInv[j] * PEjCiEff(j,i) * P0C[i];
+    for (int i = 0 ; i < _nc ; i++) {
+      double nbarC = 0.0;
+      for (int j = 0 ; j < _ne ; j++) {
+        double Mij = UjInv[j] * PEjCiEff(j,i) * P0C[i];
         _Mij(i,j) = Mij;
         nbarC += Mij * _nEstj[j];
       }
@@ -229,17 +229,17 @@ void RooUnfoldBayes::train()
       _dnCidnEj= _Mij;
     } else {
       TVectorD ksum(_ne);
-      for (Int_t j = 0 ; j < _ne ; j++) {
-        for (Int_t k = 0 ; k < _ne ; k++) {
-          Double_t sum = 0.0;
-          for (Int_t l = 0 ; l < _nc ; l++) {
+      for (int j = 0 ; j < _ne ; j++) {
+        for (int k = 0 ; k < _ne ; k++) {
+          double sum = 0.0;
+          for (int l = 0 ; l < _nc ; l++) {
             if (P0C[l]>0.0) sum += _efficiencyCi[l]*_Mij(l,k)*_dnCidnEj(l,j)/P0C[l];
           }
           ksum[k]= sum;
         }
-        for (Int_t i = 0 ; i < _nc ; i++) {
-          Double_t dsum = P0C[i]>0 ? _dnCidnEj(i,j)*_nbarCi[i]/P0C[i] : 0.0;
-          for (Int_t k = 0 ; k < _ne ; k++) {
+        for (int i = 0 ; i < _nc ; i++) {
+          double dsum = P0C[i]>0 ? _dnCidnEj(i,j)*_nbarCi[i]/P0C[i] : 0.0;
+          for (int k = 0 ; k < _ne ; k++) {
             dsum -= _Mij(i,k)*_nEstj[k]*ksum[k];
           }
           // update dnCidnEj. Note that we can do this in-place due to the ordering of the accesses.
@@ -253,7 +253,7 @@ void RooUnfoldBayes::train()
     if (_smoothit && kiter < (_niter-1)) smooth(PbarCi);
 
     // Chi2 based on Poisson errors
-    Double_t chi2 = getChi2(PbarCi, P0C, _nbartrue);
+    double chi2 = getChi2(PbarCi, P0C, _nbartrue);
     if (verbose()>=1) cout << "Chi^2 of change " << chi2 << endl;
 
     // replace P0C
@@ -265,7 +265,7 @@ void RooUnfoldBayes::train()
 }
 
 //-------------------------------------------------------------------------
-void RooUnfoldBayes::getCovariance(Bool_t doUnfoldSystematic)
+void RooUnfoldBayes::getCovariance(bool doUnfoldSystematic)
 {
   if (verbose()>=1) cout << "Calculating covariances due to number of measured events" << endl;
 
@@ -290,29 +290,29 @@ void RooUnfoldBayes::getCovariance(Bool_t doUnfoldSystematic)
   // Pre-compute some numbers
   TVectorD inv_nCi(_nCi);
   TMatrixD inv_npec(_nc,_ne);  // automatically zeroed
-  for (Int_t k = 0 ; k < _nc ; k++) {
+  for (int k = 0 ; k < _nc ; k++) {
     if (inv_nCi[k] != 0) {inv_nCi[k] = 1.0 / inv_nCi[k];}
-    for (Int_t i = 0 ; i < _ne ; i++) {
+    for (int i = 0 ; i < _ne ; i++) {
       if (inv_nCi[k] == 0) continue;
-      Double_t pec  = _Nji(i,k) / _nCi[k];
-      Double_t temp = inv_nCi[k] / pec;
+      double pec  = _Nji(i,k) / _nCi[k];
+      double temp = inv_nCi[k] / pec;
       if (pec !=0) {inv_npec(k,i) = temp; }
     }
   }
   //
   TMatrixD M_tmp(_nc,_ne);  // automatically zeroed
-  for (Int_t i = 0 ; i < _ne ; i++) {
-    Double_t temp = 0.0;
+  for (int i = 0 ; i < _ne ; i++) {
+    double temp = 0.0;
     // diagonal element
-    for (Int_t u = 0 ; u < _nc ; u++) {
+    for (int u = 0 ; u < _nc ; u++) {
       temp = _Mij(i,u) * _Mij(i,u) * _efficiencyCi[u] * _efficiencyCi[u]
         * (inv_npec(u,i) - inv_nCi[u]);
       M_tmp(i, i) += temp;
     }
 
     // off-diagonal element
-    for (Int_t j = i+1 ; j < _ne ; j++) {
-      for (Int_t u = 0 ; u < _nc ; u++) {
+    for (int j = i+1 ; j < _ne ; j++) {
+      for (int u = 0 ; u < _nc ; u++) {
         temp = -1.0 * _Mij(i,u) * _Mij(j,u) * _efficiencyCi[u] * _efficiencyCi[u]
           * inv_nCi[u];
         M_tmp(j, i) += temp;
@@ -323,13 +323,13 @@ void RooUnfoldBayes::getCovariance(Bool_t doUnfoldSystematic)
 
   // now calculate covariance
   TMatrixD Vc1(_nc,_nc);
-  Double_t neff_inv = 0.0;
-  for (Int_t k = 0 ; k < _nc ; k++) {
+  double neff_inv = 0.0;
+  for (int k = 0 ; k < _nc ; k++) {
     (_efficiencyCi[k] != 0) ? neff_inv = inv_nCi[k]  / _efficiencyCi[k] : neff_inv = 0;
-    for (Int_t l = k ; l < _nc ; l++) {
-      for (Int_t i = 0 ; i < _ne ; i++) {
-        for (Int_t j = 0 ; j < _ne ; j++) {
-          Double_t covM = _Mij(i,l) * inv_nCi[l] +
+    for (int l = k ; l < _nc ; l++) {
+      for (int i = 0 ; i < _ne ; i++) {
+        for (int j = 0 ; j < _ne ; j++) {
+          double covM = _Mij(i,l) * inv_nCi[l] +
             _Mij(j,k) * inv_nCi[k] + M_tmp(j,i);
           if (k==l) {
             covM -= neff_inv;
@@ -341,7 +341,7 @@ void RooUnfoldBayes::getCovariance(Bool_t doUnfoldSystematic)
           }
           covM +=  _Mij(i,k) * _Mij(j,l);
 
-          Double_t temp = _nEstj[i] * _nEstj[j] * covM;
+          double temp = _nEstj[i] * _nEstj[j] * covM;
           Vc1(l, k) += temp;
         } // j...
       } // i...
@@ -373,18 +373,18 @@ void RooUnfoldBayes::smooth(TVectorD& PbarCi) const
 }
 
 //-------------------------------------------------------------------------
-Double_t RooUnfoldBayes::getChi2(const TVectorD& prob1,
+double RooUnfoldBayes::getChi2(const TVectorD& prob1,
                                  const TVectorD& prob2,
-                                 Double_t nevents) const
+                                 double nevents) const
 {
   // calculate the chi^2. prob1 and prob2 are the probabilities
   // and nevents is the number of events used to calculate the probabilities
-  Double_t chi2= 0.0;
-  Int_t n= prob1.GetNrows();
+  double chi2= 0.0;
+  int n= prob1.GetNrows();
   if (verbose()>=2) cout << "chi2 " << n << " " << nevents << endl;
-  for (Int_t i = 0 ; i < n ; i++) {
-    Double_t psum  = (prob1[i] + prob2[i])*nevents;
-    Double_t pdiff = (prob1[i] - prob2[i])*nevents;
+  for (int i = 0 ; i < n ; i++) {
+    double psum  = (prob1[i] + prob2[i])*nevents;
+    double pdiff = (prob1[i] - prob2[i])*nevents;
     if (psum > 1.0) {
       chi2 = chi2 + (pdiff*pdiff)/psum;
     } else {
@@ -406,7 +406,7 @@ void RooUnfoldBayes::Print(Option_t* option) const
   cout << "Unfolding Algorithm" << endl;
   cout << "Generated (Training):" << endl;
   cout << "  Total Number of bins   : " << _nc << endl;
-  Double_t ntrue = _nCi.Sum();
+  double ntrue = _nCi.Sum();
   cout << "  Total Number of events : " << ntrue << endl;
 
   cout << "Measured (Training):" << endl;
@@ -421,11 +421,11 @@ void RooUnfoldBayes::Print(Option_t* option) const
   cout << "-------------------------------------------\n" << endl;
 
   if (((_nEstj.Sum())!=0) || ((_nCi.Sum())!=0)) {
-    Int_t iend = min(_nCi.GetNrows(),_nEstj.GetNrows());
+    int iend = min(_nCi.GetNrows(),_nEstj.GetNrows());
     cout << "    \tTrain \tTest\tUnfolded"<< endl;
     cout << "Bin \tTruth \tInput\tOutput"<< endl;
-    Int_t ir=0, ic=0;
-    for (Int_t i=0; i < iend ; i++) {
+    int ir=0, ic=0;
+    for (int i=0; i < iend ; i++) {
       ic = i / _ne;
       ir = i - (ic*_ne);
       if ((_nCi[i] == 0) && (_nEstj[i] == 0) &&
@@ -436,7 +436,7 @@ void RooUnfoldBayes::Print(Option_t* option) const
 
     // if the number of bins is different
     if (_nCi.GetNrows() > _nEstj.GetNrows() ) {
-      for (Int_t i=iend; i < _nCi.GetNrows() ; i++) {
+      for (int i=iend; i < _nCi.GetNrows() ; i++) {
         cout << i << "\t " << _nCi[i] << endl;
       }
     }

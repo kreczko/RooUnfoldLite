@@ -62,7 +62,7 @@ END_HTML */
 
 /////////////////////////////////////////////////////////////
 
-#include "RooUnfold.h"
+#include "../interface/RooUnfold.h"
 
 #include <iostream>
 #include <iomanip>
@@ -81,18 +81,18 @@ END_HTML */
 #include "TDecompChol.h"
 #include "TRandom.h"
 
-#include "RooUnfoldResponse.h"
-#include "RooUnfoldErrors.h"
+#include "../interface/RooUnfoldResponse.h"
+#include "../interface/RooUnfoldErrors.h"
 // Need subclasses just for RooUnfold::New()
-#include "RooUnfoldBayes.h"
-#include "RooUnfoldSvd.h"
-#include "RooUnfoldInvert.h"
-#include "RooUnfoldBinByBin.h"
+#include "../interface/RooUnfoldBayes.h"
+#include "../interface/RooUnfoldSvd.h"
+#include "../interface/RooUnfoldInvert.h"
+#include "../interface/RooUnfoldBinByBin.h"
 #ifndef NOTUNFOLD
-#include "RooUnfoldTUnfold.h"
+#include "../interface/RooUnfoldTUnfold.h"
 #endif
 #ifdef HAVE_DAGOSTINI
-#include "RooUnfoldDagostini.h"
+#include "../interface/RooUnfoldDagostini.h"
 #endif
 
 using std::vector;
@@ -116,7 +116,7 @@ RooUnfold::RooUnfold (const RooUnfoldResponse* res, const TH1* meas, const char*
   Setup (res, meas);
 }
 
-RooUnfold* RooUnfold::New (Algorithm alg, const RooUnfoldResponse* res, const TH1* meas,Double_t regparm,
+RooUnfold* RooUnfold::New (Algorithm alg, const RooUnfoldResponse* res, const TH1* meas,double regparm,
                            const char* name, const char* title)
 {
     /*Unfolds according to the value of the alg enum:
@@ -161,7 +161,7 @@ RooUnfold* RooUnfold::New (Algorithm alg, const RooUnfoldResponse* res, const TH
       return 0;
 #endif
     default:
-      cerr << "Unknown RooUnfold method " << Int_t(alg) << endl;
+      cerr << "Unknown RooUnfold method " << int(alg) << endl;
       return 0;
   }
   if (name)  unfold->SetName  (name);
@@ -252,15 +252,15 @@ void RooUnfold::SetMeasured (const TVectorD& meas, const TVectorD& err)
 {
   // Set measured distribution and errors. Should be called after setting response matrix.
   if (!_measmine) {
-    Bool_t oldstat= TH1::AddDirectoryStatus();
+    bool oldstat= TH1::AddDirectoryStatus();
     TH1::AddDirectory (kFALSE);
     _measmine= (TH1*) _res->Hmeasured()->Clone (GetName());
     TH1::AddDirectory (oldstat);
     _measmine->Reset();
     _measmine->SetTitle (GetTitle());
   }
-  for (Int_t i= 0; i<_nm; i++) {
-    Int_t j= RooUnfoldResponse::GetBin (_measmine, i, _overflow);
+  for (int i= 0; i<_nm; i++) {
+    int j= RooUnfoldResponse::GetBin (_measmine, i, _overflow);
     _measmine->SetBinContent(j, meas[i]);
     _measmine->SetBinError  (j, err [i]);
   }
@@ -281,8 +281,8 @@ void RooUnfold::SetMeasuredCov (const TMatrixD& cov)
   delete _eMes;
   delete _covMes;
   _eMes= new TVectorD(_nm);
-  for (Int_t i= 0; i<_nm; i++) {
-    Double_t e= cov(i,i);
+  for (int i= 0; i<_nm; i++) {
+    double e= cov(i,i);
     if (e>0.0) (*_eMes)[i]= sqrt(e);
   }
   _covMes= new TMatrixD (cov);
@@ -295,8 +295,8 @@ const TMatrixD& RooUnfold::GetMeasuredCov() const
   if (_covMes) return *_covMes;
   const TVectorD& err= Emeasured();
   _covMes= new TMatrixD (_nm,_nm);
-  for (Int_t i= 0 ; i<_nm; i++) {
-    Double_t e= err[i];
+  for (int i= 0 ; i<_nm; i++) {
+    double e= err[i];
     (*_covMes)(i,i)= e*e;
   }
   return *_covMes;
@@ -322,8 +322,8 @@ void RooUnfold::Unfold()
   // Dummy unfolding - just copies input
   cout << "********************** " << ClassName() << ": dummy unfolding - just copy input **********************" << endl;
   _rec.ResizeTo (_nt);
-  Int_t nb= _nm < _nt ? _nm : _nt;
-  for (Int_t i= 0; i < nb; i++) {
+  int nb= _nm < _nt ? _nm : _nt;
+  for (int i= 0; i < nb; i++) {
     _rec(i)= Vmeasured()(i);
   }
   _unfolded= true;
@@ -336,7 +336,7 @@ void RooUnfold::GetErrors()
     if (!_haveCov) GetCov();
     if (!_haveCov) return;
     _variances.ResizeTo(_nt);
-    for (Int_t i= 0; i < _nt; i++) {
+    for (int i= 0; i < _nt; i++) {
       _variances(i)= _cov(i,i);
     }
     _haveErrors= true;
@@ -346,7 +346,7 @@ void RooUnfold::GetCov()
 {
     //Dummy routine to get covariance matrix. It should be overridden by derived classes.
   const TMatrixD& covmeas= GetMeasuredCov();
-  Int_t nb= _nm < _nt ? _nm : _nt;
+  int nb= _nm < _nt ? _nm : _nt;
   _cov.ResizeTo (_nt, _nt);
   for (int i=0; i<nb; i++)
     for (int j=0; j<nb; j++)
@@ -361,25 +361,25 @@ void RooUnfold::GetErrMat()
   _err_mat.ResizeTo(_nt,_nt);
   TVectorD xisum (_nt);
   TMatrixD xijsum(_nt,_nt);
-  for (Int_t k=0; k<_NToys; k++){
+  for (int k=0; k<_NToys; k++){
     RooUnfold* unfold= RunToy();
     const TVectorD& x= unfold->Vreco();
-    for (Int_t i=0; i<_nt;i++){
-      Double_t xi= x[i];
+    for (int i=0; i<_nt;i++){
+      double xi= x[i];
       xisum[i] += xi;
-      for (Int_t j=0; j<_nt; j++) xijsum(i,j) += xi * x[j];
+      for (int j=0; j<_nt; j++) xijsum(i,j) += xi * x[j];
     }
     delete unfold;
   }
-  for (Int_t i=0; i<_nt; i++){
-    for (Int_t j=0; j<_nt; j++){
+  for (int i=0; i<_nt; i++){
+    for (int j=0; j<_nt; j++){
       _err_mat(i,j)= (xijsum(i,j) - (xisum[i]*xisum[j])/_NToys) / (_NToys-1);
     }
   }
   _have_err_mat=true;
 }
 
-Bool_t RooUnfold::UnfoldWithErrors (ErrorTreatment withError)
+bool RooUnfold::UnfoldWithErrors (ErrorTreatment withError)
 {
   if (!_unfolded) {
     if (_fail) return false;
@@ -402,7 +402,7 @@ Bool_t RooUnfold::UnfoldWithErrors (ErrorTreatment withError)
       return false;
     }
   }
-  Bool_t ok;
+  bool ok;
   switch (withError) {
     case kErrors:
       if   (!_haveErrors)   GetErrors();
@@ -423,7 +423,7 @@ Bool_t RooUnfold::UnfoldWithErrors (ErrorTreatment withError)
   return ok;
 }
 
-Double_t RooUnfold::Chi2(const TH1* hTrue,ErrorTreatment DoChi2)
+double RooUnfold::Chi2(const TH1* hTrue,ErrorTreatment DoChi2)
 {
     /*Calculates Chi squared. Method depends on value of DoChi2
     0: sum of (residuals/error)squared
@@ -439,8 +439,8 @@ Double_t RooUnfold::Chi2(const TH1* hTrue,ErrorTreatment DoChi2)
         if (!_unfolded) return -1;
 
         TVectorD res(_nt);
-        for (Int_t i = 0 ; i < _nt; i++) {
-            Int_t it= RooUnfoldResponse::GetBin (hTrue, i, _overflow);
+        for (int i = 0 ; i < _nt; i++) {
+            int it= RooUnfoldResponse::GetBin (hTrue, i, _overflow);
             if (hTrue->GetBinContent(it)!=0.0 || hTrue->GetBinError(it)>0.0) {
               res(i) = _rec(i) - hTrue->GetBinContent(it);
             }
@@ -450,10 +450,10 @@ Double_t RooUnfold::Chi2(const TH1* hTrue,ErrorTreatment DoChi2)
         TMatrixD ereco_cut=CutZeros(ereco);
         if (ereco_cut.GetNrows()<=0) return 0.0;
         TMatrixD res_matrix_cut(ereco_cut.GetNrows(),1);
-        for (Int_t i=0, v=0; i<_nt; i++){
+        for (int i=0, v=0; i<_nt; i++){
             if (ereco(i,i) != 0.0) res_matrix_cut(v++,0)= res(i);
         }
-        Double_t Ereco_det=ereco_cut.Determinant();
+        double Ereco_det=ereco_cut.Determinant();
         TMatrixD res_matrix_t=res_matrix_cut;
         res_matrix_t.T();
         if (fabs(Ereco_det)<1e-5 && _verbose>=1){
@@ -461,7 +461,7 @@ Double_t RooUnfold::Chi2(const TH1* hTrue,ErrorTreatment DoChi2)
             cerr << "Chi^2 may be invalid due to small determinant" << endl;
         }
         TDecompSVD svd(ereco_cut);
-        Double_t cond=svd.Condition();
+        double cond=svd.Condition();
         if (_verbose>=1){
             cout<<"For Covariance matrix condition= "<<cond<<" determinant= "<<Ereco_det<<endl;
         }
@@ -474,15 +474,15 @@ Double_t RooUnfold::Chi2(const TH1* hTrue,ErrorTreatment DoChi2)
         return chisq_nw(0,0);
     }
     else{
-        Double_t chi2=0;
+        double chi2=0;
         TVectorD ereco(_nt);
         ereco= ErecoV(DoChi2);
         if (!_unfolded) return -1;
-        for (Int_t i = 0 ; i < _nt; i++) {
-            Int_t it= RooUnfoldResponse::GetBin (hTrue, i, _overflow);
+        for (int i = 0 ; i < _nt; i++) {
+            int it= RooUnfoldResponse::GetBin (hTrue, i, _overflow);
             if (ereco(i)>0.0 &&
                 (hTrue->GetBinContent(it)!=0.0 || hTrue->GetBinError(it)>0.0)) {
-                Double_t ypull = (_rec(i) - hTrue->GetBinContent(it)) / ereco(i);
+                double ypull = (_rec(i) - hTrue->GetBinContent(it)) / ereco(i);
                 chi2 += ypull*ypull;
             }
         }
@@ -502,30 +502,30 @@ void RooUnfold::PrintTable (std::ostream& o, const TH1* hTrue, ErrorTreatment wi
   const TH1* hTrain=     response()->Hmeasured();
   std::ostringstream fmt;
   fmt.copyfmt (o);
-  Int_t dim= hReco->GetDimension(), ntxb= hReco->GetNbinsX()+2, ntyb= hReco->GetNbinsY()+2;
+  int dim= hReco->GetDimension(), ntxb= hReco->GetNbinsX()+2, ntyb= hReco->GetNbinsY()+2;
   if (hMeas->GetDimension() != dim || hMeas->GetNbinsX()+2 != ntxb || hMeas->GetNbinsY()+2 != ntyb) dim= 1;
-  Int_t iwid= (dim==3) ? 8 : (dim==2) ? 7 : 5;
+  int iwid= (dim==3) ? 8 : (dim==2) ? 7 : 5;
   const char* xwid= (dim==3) ? "===" : (dim==2) ? "==" : "";
   o << "===============================================================================" << xwid << endl
     << setw(iwid) << ""      << setw(9) << "Train" << setw(9) << "Train"    << setw(9) << "Test"  << setw(9) << "Test"  << setw(9) << "Unfolded" << setw(10)<<"Error on"<<setw(9) << "Diff" << setw(9) << "Pull" << endl
     << setw(iwid) << "Bin"   << setw(9) << "Truth" << setw(9) << "Measured" << setw(9) << "Truth" << setw(9) << "Input" << setw(9) << "Output"   << setw(10)<<"Unfolding"<<endl
     << "===============================================================================" << xwid << endl;
-  Double_t true_train_tot=0;
-  Double_t meas_train_tot=0;
-  Double_t true_test_tot=0;
-  Double_t meas_test_tot=0;
-  Double_t unf_tot=0;
-  Double_t chi2= 0.0;
-  Int_t ndf= 0, first= (_overflow ? 0 : 1);
-  Int_t maxbin= _nt < _nm ? _nm : _nt;
-  for (Int_t i = 0 ; i < maxbin; i++) {
-    Int_t it= RooUnfoldResponse::GetBin (hReco, i, _overflow);
-    Int_t im= RooUnfoldResponse::GetBin (hMeas, i, _overflow);
+  double true_train_tot=0;
+  double meas_train_tot=0;
+  double true_test_tot=0;
+  double meas_test_tot=0;
+  double unf_tot=0;
+  double chi2= 0.0;
+  int ndf= 0, first= (_overflow ? 0 : 1);
+  int maxbin= _nt < _nm ? _nm : _nt;
+  for (int i = 0 ; i < maxbin; i++) {
+    int it= RooUnfoldResponse::GetBin (hReco, i, _overflow);
+    int im= RooUnfoldResponse::GetBin (hMeas, i, _overflow);
 
     if (dim==2 || dim==3) {
-      Int_t iw= (dim==2) ? 3 : 2;
-      Int_t ix= it%ntxb;
-      Int_t iy= ((it-ix)/ntxb)%ntyb;
+      int iw= (dim==2) ? 3 : 2;
+      int ix= it%ntxb;
+      int iy= ((it-ix)/ntxb)%ntyb;
       o << setw(iw) << ix << ',' << setw(iw) << iy;
       if (dim==3) o << ',' << setw(iw) << ((it-ix)/ntxb - iy)/ntyb;
     } else
@@ -555,17 +555,17 @@ void RooUnfold::PrintTable (std::ostream& o, const TH1* hTrue, ErrorTreatment wi
       o << setw(9) << ' ';
     o << setprecision(1);
     if (i<_nt) {
-      Double_t y= hReco->GetBinContent(it), yerr = hReco->GetBinError(it);
+      double y= hReco->GetBinContent(it), yerr = hReco->GetBinError(it);
       o << ' ' << setw(8) << y;
       o << ' ' << setw(9) << yerr;
       if (hTrue &&
           (                       y!=0.0 || (withError &&                   yerr>0.0)) &&
           (hTrue->GetBinContent(it)!=0.0 || (withError && hTrue->GetBinError(it)>0.0))) {
-        Double_t ydiff= y - hTrue->GetBinContent(it);
+        double ydiff= y - hTrue->GetBinContent(it);
         o << ' ' << setw(8) << ydiff;
         if (yerr>0.0) {
           ndf++;
-          Double_t ypull = ydiff/yerr;
+          double ypull = ydiff/yerr;
           chi2 += ypull*ypull;
            o << ' ' << setw(8) << ypull;
         }
@@ -594,7 +594,7 @@ void RooUnfold::PrintTable (std::ostream& o, const TH1* hTrue, ErrorTreatment wi
     << "===============================================================================" << xwid << endl;
   o.copyfmt (fmt);
   if (hTrue) {
-    Double_t chi_squ = chi2;
+    double chi_squ = chi2;
     if (withError==kCovariance || withError==kCovToy) {
       chi_squ = Chi2(hTrue,withError);
       o << "Chi^2/NDF=" << chi_squ << "/" << ndf << " (bin-by-bin Chi^2=" << chi2 << ")";
@@ -635,8 +635,8 @@ TH1* RooUnfold::Hreco (ErrorTreatment withError)
   if (!UnfoldWithErrors (withError)) withError= kNoError;
   if (!_unfolded) return reco;
 
-  for (Int_t i= 0; i < _nt; i++) {
-    Int_t j= RooUnfoldResponse::GetBin (reco, i, _overflow);
+  for (int i= 0; i < _nt; i++) {
+    int j= RooUnfoldResponse::GetBin (reco, i, _overflow);
     reco->SetBinContent (j,             _rec(i));
     if        (withError==kErrors){
       reco->SetBinError (j, sqrt (fabs (_variances(i))));
@@ -659,25 +659,25 @@ void RooUnfold::GetSettings()
     _defaultparm=0;
 }
 
-Double_t RooUnfold::GetMinParm() const
+double RooUnfold::GetMinParm() const
 {
     //Get minimum regularisation parameter for unfolding method
     return _minparm;
 }
 
-Double_t RooUnfold::GetMaxParm() const
+double RooUnfold::GetMaxParm() const
 {
     //Get maximum regularisation parameter for unfolding method
     return _maxparm;
 }
 
-Double_t RooUnfold::GetStepSizeParm() const
+double RooUnfold::GetStepSizeParm() const
 {
     //Get suggested step size for unfolding distribution
     return _stepsizeparm;
 }
 
-Double_t RooUnfold::GetDefaultParm() const
+double RooUnfold::GetDefaultParm() const
 {
     //Get suggested regularisation parameter.
     return _defaultparm;
@@ -704,7 +704,7 @@ RooUnfold* RooUnfold::RunToy() const
       }
     }
     TVectorD newmeas(_nm);
-    for (Int_t i= 0; i<_nm; i++) newmeas[i]= gRandom->Gaus(0.0,1.0);
+    for (int i= 0; i<_nm; i++) newmeas[i]= gRandom->Gaus(0.0,1.0);
     newmeas *= *_covL;
     newmeas += Vmeasured();
     unfold->SetMeasured(newmeas,*_covMes);
@@ -713,8 +713,8 @@ RooUnfold* RooUnfold::RunToy() const
 
     TVectorD newmeas= Vmeasured();
     const TVectorD& err= Emeasured();
-    for (Int_t i= 0; i<_nm; i++) {
-      Double_t e= err[i];
+    for (int i= 0; i<_nm; i++) {
+      double e= err[i];
       if (e>0.0) newmeas[i] += gRandom->Gaus(0,e);
     }
     unfold->SetMeasured(newmeas,err);
@@ -833,7 +833,7 @@ TVectorD RooUnfold::ErecoV(ErrorTreatment withError)
     return Ereco_v;
 }
 
-TH1D* RooUnfold::HistNoOverflow (const TH1* h, Bool_t overflow)
+TH1D* RooUnfold::HistNoOverflow (const TH1* h, bool overflow)
 {
   if (!overflow) {   // also for 2D+
     TH1D* hx= RooUnfoldResponse::H2H1D (h, h->GetNbinsX()*h->GetNbinsY()*h->GetNbinsZ());
@@ -843,25 +843,25 @@ TH1D* RooUnfold::HistNoOverflow (const TH1* h, Bool_t overflow)
     hx->SetBinContent (hx->GetNbinsX()+1, 0.0);
     return hx;
   }
-  Int_t nb= h->GetNbinsX();
-  Double_t xlo= h->GetXaxis()->GetXmin(), xhi= h->GetXaxis()->GetXmax(), xb= (xhi-xlo)/nb;
+  int nb= h->GetNbinsX();
+  double xlo= h->GetXaxis()->GetXmin(), xhi= h->GetXaxis()->GetXmax(), xb= (xhi-xlo)/nb;
   nb += 2;
   TH1D* hx= new TH1D (h->GetName(), h->GetTitle(), nb, xlo-xb, xhi+xb);
-  for (Int_t i= 0; i < nb; i++) {
+  for (int i= 0; i < nb; i++) {
     hx->SetBinContent (i+1, h->GetBinContent (i));
     hx->SetBinError   (i+1, h->GetBinError   (i));
   }
   return hx;
 }
 
-TH1* RooUnfold::Resize (TH1* h, Int_t nx, Int_t ny, Int_t nz)
+TH1* RooUnfold::Resize (TH1* h, int nx, int ny, int nz)
 {
   // Resize a histogram with a different number of bins.
   // Contents and errors are copied to the same bin numbers (the overflow bin
   // is copied to the new overflow bin) in the new histogram.
   // If the new histogram is larger than the old, the extra bins are zeroed.
-  Int_t mx= h->GetNbinsX(), my= h->GetNbinsY(), mz= h->GetNbinsZ();
-  Int_t nd= h->GetDimension();
+  int mx= h->GetNbinsX(), my= h->GetNbinsY(), mz= h->GetNbinsZ();
+  int nd= h->GetDimension();
   if (nx<0 || nd<1) nx= mx;
   if (ny<0 || nd<2) ny= my;
   if (nz<0 || nd<3) nz= mz;
@@ -869,30 +869,30 @@ TH1* RooUnfold::Resize (TH1* h, Int_t nx, Int_t ny, Int_t nz)
 
   bool mod= false;
   if (nx!=mx) {
-    Double_t xlo= h->GetXaxis()->GetXmin(), xhi= h->GetXaxis()->GetXmax();
+    double xlo= h->GetXaxis()->GetXmin(), xhi= h->GetXaxis()->GetXmax();
     h->GetXaxis()->Set (nx, xlo, xlo+((xhi-xlo)/mx)*nx);
     mod= true;
   }
   if (ny!=my) {
-    Double_t ylo= h->GetYaxis()->GetXmin(), yhi= h->GetYaxis()->GetXmax();
+    double ylo= h->GetYaxis()->GetXmin(), yhi= h->GetYaxis()->GetXmax();
     h->GetYaxis()->Set (ny, ylo, ylo+((yhi-ylo)/my)*ny);
     mod= true;
   }
   if (nz!=mz) {
-    Double_t zlo= h->GetZaxis()->GetXmin(), zhi= h->GetZaxis()->GetXmax();
+    double zlo= h->GetZaxis()->GetXmin(), zhi= h->GetZaxis()->GetXmax();
     h->GetZaxis()->Set (nz, zlo, zlo+((zhi-zlo)/mz)*nz);
     mod= true;
   }
 
   if (mod) {
     h->SetBinsLength();  // Just copies array, which isn't right for overflows or 2D/3D
-    Int_t s= h->GetSumw2N();
-    Int_t ox= mx+1, oy= my+1, oz= mz+1;  // old overflow bin
-    Int_t px= nx+1, py= ny+1, pz= nz+1;  // new overflow bin
+    int s= h->GetSumw2N();
+    int ox= mx+1, oy= my+1, oz= mz+1;  // old overflow bin
+    int px= nx+1, py= ny+1, pz= nz+1;  // new overflow bin
 
     if        (nd==1) {
 
-      for (Int_t i= 0; i<=nx; i++) {
+      for (int i= 0; i<=nx; i++) {
                h->SetBinContent (i, i>mx ? 0.0 : hc->GetBinContent (i));
         if (s) h->SetBinError   (i, i>mx ? 0.0 : hc->GetBinError   (i));
       }
@@ -901,15 +901,15 @@ TH1* RooUnfold::Resize (TH1* h, Int_t nx, Int_t ny, Int_t nz)
 
     } else if (nd==2) {
 
-      for (Int_t i= 0; i<=nx; i++) {
-        for (Int_t j= 0; j<=ny; j++) {
+      for (int i= 0; i<=nx; i++) {
+        for (int j= 0; j<=ny; j++) {
                  h->SetBinContent (i, j, i>mx||j>my ? 0.0 : hc->GetBinContent (i, j));
           if (s) h->SetBinError   (i, j, i>mx||j>my ? 0.0 : hc->GetBinError   (i, j));
         }
                h->SetBinContent (i, py, i>mx ? 0.0 : hc->GetBinContent (i, oy));
         if (s) h->SetBinError   (i, py, i>mx ? 0.0 : hc->GetBinError   (i, oy));
       }
-      for (Int_t j= 0; j<=ny; j++) {
+      for (int j= 0; j<=ny; j++) {
                h->SetBinContent (px, j, j>my ? 0.0 : hc->GetBinContent (ox, j));
         if (s) h->SetBinError   (px, j, j>my ? 0.0 : hc->GetBinError   (ox, j));
       }
@@ -918,9 +918,9 @@ TH1* RooUnfold::Resize (TH1* h, Int_t nx, Int_t ny, Int_t nz)
 
     } else if (nd==3) {
 
-      for (Int_t i= 0; i<=nx; i++) {
-        for (Int_t j= 0; j<=ny; j++) {
-          for (Int_t k= 0; k<=nz; k++) {
+      for (int i= 0; i<=nx; i++) {
+        for (int j= 0; j<=ny; j++) {
+          for (int k= 0; k<=nz; k++) {
                    h->SetBinContent (i, j, k, i>mx||j>my||k>mz ? 0.0 : hc->GetBinContent (i, j, k));
             if (s) h->SetBinError   (i, j, k, i>mx||j>my||k>mz ? 0.0 : hc->GetBinError   (i, j, k));
           }
@@ -930,16 +930,16 @@ TH1* RooUnfold::Resize (TH1* h, Int_t nx, Int_t ny, Int_t nz)
                h->SetBinContent (i, py, pz, i>mx ? 0.0 : hc->GetBinContent (i, oy, oz));
         if (s) h->SetBinError   (i, py, pz, i>mx ? 0.0 : hc->GetBinError   (i, oy, oz));
       }
-      for (Int_t j= 0; j<=ny; j++) {
-        for (Int_t k= 0; k<=nz; k++) {
+      for (int j= 0; j<=ny; j++) {
+        for (int k= 0; k<=nz; k++) {
                  h->SetBinContent (px, j, k, j>my||k>mz ? 0.0 : hc->GetBinContent (ox, j, k));
           if (s) h->SetBinError   (px, j, k, j>my||k>mz ? 0.0 : hc->GetBinError   (ox, j, k));
         }
                h->SetBinContent (px, j, pz, j>my ? 0.0 : hc->GetBinContent (ox, j, oz));
         if (s) h->SetBinError   (px, j, pz, j>my ? 0.0 : hc->GetBinError   (ox, j, oz));
       }
-      for (Int_t k= 0; k<=nz; k++) {
-        for (Int_t i= 0; i<=nx; i++) {
+      for (int k= 0; k<=nz; k++) {
+        for (int i= 0; i<=nx; i++) {
                  h->SetBinContent (i, py, k, i>mx||k>mz ? 0.0 : hc->GetBinContent (i, oy, k));
           if (s) h->SetBinError   (i, py, k, i>mx||k>mz ? 0.0 : hc->GetBinError   (i, oy, k));
         }
@@ -969,7 +969,7 @@ void RooUnfold::Streamer (TBuffer &R__b)
   if (R__b.IsReading()) {
     // Don't add our histograms to the currect directory.
     // We own them and we don't want them to disappear when the file is closed.
-    Bool_t oldstat= TH1::AddDirectoryStatus();
+    bool oldstat= TH1::AddDirectoryStatus();
     TH1::AddDirectory (kFALSE);
     RooUnfold::Class()->ReadBuffer  (R__b, this);
     TH1::AddDirectory (oldstat);

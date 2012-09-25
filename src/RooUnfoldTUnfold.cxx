@@ -24,7 +24,8 @@ END_HTML */
 
 /////////////////////////////////////////////////////////////
 
-#include "RooUnfoldTUnfold.h"
+#include "../interface/RooUnfoldTUnfold.h"
+#include "../interface/RooUnfoldResponse.h"
 
 #include <iostream>
 
@@ -35,7 +36,6 @@ END_HTML */
 #include "TUnfold.h"
 #include "TGraph.h"
 
-#include "RooUnfoldResponse.h"
 
 using std::cout;
 using std::cerr;
@@ -125,7 +125,7 @@ RooUnfoldTUnfold::Unfold()
   if (_nm<_nt)     cerr << "Warning: fewer measured bins than truth bins. TUnfold may not work correctly." << endl;
   if (_haveCovMes) cerr << "Warning: TUnfold does not account for bin-bin correlations on measured input"    << endl;
 
-  Bool_t oldstat= TH1::AddDirectoryStatus();
+  bool oldstat= TH1::AddDirectoryStatus();
   TH1::AddDirectory (kFALSE);
   TH1D* meas= HistNoOverflow (_meas, _overflow);
   TH2D* Hres=_res->HresponseNoOverflow();
@@ -133,9 +133,9 @@ RooUnfoldTUnfold::Unfold()
 
   // Add inefficiencies to measured overflow bin
   TVectorD tru= _res->Vtruth();
-  for (Int_t j= 1; j<=_nt; j++) {
-    Double_t ntru= 0.0;
-    for (Int_t i= 1; i<=_nm; i++) {
+  for (int j= 1; j<=_nt; j++) {
+    double ntru= 0.0;
+    for (int i= 1; i<=_nm; i++) {
       ntru += Hres->GetBinContent(i,j);
     }
     Hres->SetBinContent (_nm+1, j, tru[j-1]-ntru);
@@ -144,46 +144,46 @@ RooUnfoldTUnfold::Unfold()
   // Subtract fakes from measured distribution
   if (_res->FakeEntries()) {
     TVectorD fakes= _res->Vfakes();
-    Double_t fac= _res->Vmeasured().Sum();
+    double fac= _res->Vmeasured().Sum();
     if (fac!=0.0) fac=  Vmeasured().Sum() / fac;
     if (_verbose>=1) cout << "Subtract " << fac*fakes.Sum() << " fakes from measured distribution" << endl;
-    for (Int_t i= 1; i<=_nm; i++)
+    for (int i= 1; i<=_nm; i++)
       meas->SetBinContent (i, meas->GetBinContent(i)-(fac*fakes[i-1]));
   }
 
-  Int_t ndim= _meas->GetDimension();
+  int ndim= _meas->GetDimension();
   TUnfold::ERegMode reg= _reg_method;
   if (ndim == 2 || ndim == 3) reg= TUnfold::kRegModeNone;  // set explicitly
 
   _unf= new TUnfold(Hres,TUnfold::kHistMapOutputVert,reg);
 
   if        (ndim == 2) {
-    Int_t nx= _meas->GetNbinsX(), ny= _meas->GetNbinsY();
+    int nx= _meas->GetNbinsX(), ny= _meas->GetNbinsY();
     _unf->RegularizeBins2D (0, 1, nx, nx, ny, _reg_method);
   } else if (ndim == 3) {
-    Int_t nx= _meas->GetNbinsX(), ny= _meas->GetNbinsY(), nz= _meas->GetNbinsZ(), nxy= nx*ny;
-    for (Int_t i= 0; i<nx; i++) {
+    int nx= _meas->GetNbinsX(), ny= _meas->GetNbinsY(), nz= _meas->GetNbinsZ(), nxy= nx*ny;
+    for (int i= 0; i<nx; i++) {
       _unf->RegularizeBins2D (    i, nx, ny, nxy, nz, _reg_method);
     }
-    for (Int_t i= 0; i<ny; i++) {
+    for (int i= 0; i<ny; i++) {
       _unf->RegularizeBins2D ( nx*i,  1, nx, nxy, nz, _reg_method);
     }
-    for (Int_t i= 0; i<nz; i++) {
+    for (int i= 0; i<nz; i++) {
       _unf->RegularizeBins2D (nxy*i,  1, nx,  nx, ny, _reg_method);
     }
   }
 
-  Int_t nScan=30;
+  int nScan=30;
   // use automatic L-curve scan: start with taumin=taumax=0.0
-  Double_t tauMin=0.0;
-  Double_t tauMax=0.0;
-  Int_t iBest;
+  double tauMin=0.0;
+  double tauMax=0.0;
+  int iBest;
   TSpline *logTauX,*logTauY;
   TGraph *lCurve;
   // this method scans the parameter tau and finds the kink in the L curve
   // finally, the unfolding is done for the best choice of tau
 #if ROOT_VERSION_CODE >= ROOT_VERSION(5,23,0)  /* TUnfold v6 (included in ROOT 5.22) didn't have setInput return value */
-  Int_t stat= _unf->SetInput(meas);
+  int stat= _unf->SetInput(meas);
   if(stat>=10000) {
     cerr<<"Unfolding result may be wrong: " << stat/10000 << " unconstrained output bins\n";
   }
@@ -218,8 +218,8 @@ RooUnfoldTUnfold::GetCov()
   if (!_unf) return;
   TH2D* ematrix=_unf->GetEmatrix("ematrix","error matrix",0,0);
   _cov.ResizeTo (_nt,_nt);
-  for (Int_t i= 0; i<_nt; i++) {
-    for (Int_t j= 0; j<_nt; j++) {
+  for (int i= 0; i<_nt; i++) {
+    for (int j= 0; j<_nt; j++) {
       _cov(i,j)= ematrix->GetBinContent(i+1,j+1);
     }
   }
@@ -229,7 +229,7 @@ RooUnfoldTUnfold::GetCov()
 
 
 void 
-RooUnfoldTUnfold::FixTau(Double_t tau)
+RooUnfoldTUnfold::FixTau(double tau)
 {
   // Fix regularisation parameter to a specified value
   _tau=tau;

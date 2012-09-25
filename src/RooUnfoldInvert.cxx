@@ -20,7 +20,8 @@ END_HTML */
 
 /////////////////////////////////////////////////////////////
 
-#include "RooUnfoldInvert.h"
+#include "../interface/RooUnfoldInvert.h"
+#include "../interface/RooUnfoldResponse.h"
 
 #include <iostream>
 
@@ -30,7 +31,6 @@ END_HTML */
 #include "TMatrixD.h"
 #include "TDecompSVD.h"
 
-#include "RooUnfoldResponse.h"
 
 using std::cout;
 using std::cerr;
@@ -105,14 +105,14 @@ RooUnfoldInvert::Unfold()
 
   if (_res->FakeEntries()) {
     TVectorD fakes= _res->Vfakes();
-    Double_t fac= _res->Vmeasured().Sum();
+    double fac= _res->Vmeasured().Sum();
     if (fac!=0.0) fac=  Vmeasured().Sum() / fac;
     if (_verbose>=1) cout << "Subtract " << fac*fakes.Sum() << " fakes from measured distribution" << endl;
     fakes *= fac;
     _rec -= fakes;
   }
 
-  Bool_t ok= _svd->Solve (_rec);
+  bool ok= _svd->Solve (_rec);
   _rec.ResizeTo(_nt);
   if (!ok) {
     cerr << "Response matrix Solve failed" << endl;
@@ -129,7 +129,7 @@ RooUnfoldInvert::GetCov()
     if (!_svd) return;
     TMatrixD resinv(_nt,_nm);
 #if ROOT_VERSION_CODE >= ROOT_VERSION(5,13,4)  /* TDecompSVD::Invert() didn't have ok status before 5.13/04. */
-    Bool_t ok;
+    bool ok;
     resinv=_svd->Invert(ok);
     if (!ok) {
       cerr << "response matrix inversion failed" << endl;

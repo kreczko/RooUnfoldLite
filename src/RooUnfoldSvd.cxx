@@ -23,7 +23,8 @@ END_HTML */
 
 /////////////////////////////////////////////////////////////
 
-#include "RooUnfoldSvd.h"
+#include "../interface/RooUnfoldSvd.h"
+#include "../interface/RooUnfoldResponse.h"
 
 #include <iostream>
 #include <iomanip>
@@ -40,7 +41,6 @@ END_HTML */
 #include "TSVDUnfold.h"
 #endif
 
-#include "RooUnfoldResponse.h"
 
 using std::cout;
 using std::cerr;
@@ -56,7 +56,7 @@ RooUnfoldSvd::RooUnfoldSvd (const RooUnfoldSvd& rhs)
   CopyData (rhs);
 }
 
-RooUnfoldSvd::RooUnfoldSvd (const RooUnfoldResponse* res, const TH1* meas, Int_t kreg, Int_t ntoyssvd,
+RooUnfoldSvd::RooUnfoldSvd (const RooUnfoldResponse* res, const TH1* meas, int kreg, int ntoyssvd,
                             const char* name, const char* title)
   : RooUnfold (res, meas, name, title), _kreg(kreg ? kreg : res->GetNbinsTruth()/2), _ntoyssvd(ntoyssvd)
 {
@@ -143,7 +143,7 @@ RooUnfoldSvd::Unfold()
     return;
   }
 
-  Bool_t oldstat= TH1::AddDirectoryStatus();
+  bool oldstat= TH1::AddDirectoryStatus();
   TH1::AddDirectory (kFALSE);
   _meas1d=  HistNoOverflow (_meas,             _overflow);
   _train1d= HistNoOverflow (_res->Hmeasured(), _overflow);
@@ -155,9 +155,9 @@ RooUnfoldSvd::Unfold()
   Resize (_reshist, _nb, _nb);
   if (_res->FakeEntries()) {
     TVectorD fakes= _res->Vfakes();
-    Double_t nfakes= fakes.Sum();
+    double nfakes= fakes.Sum();
     if (_verbose>=1) cout << "Add truth bin for " << nfakes << " fakes" << endl;
-    for (Int_t i= 0; i<_nm; i++) _reshist->SetBinContent(i+1,_nt+1,fakes[i]);
+    for (int i= 0; i<_nm; i++) _reshist->SetBinContent(i+1,_nt+1,fakes[i]);
     _truth1d->SetBinContent(_nt+1,nfakes);
   }
 
@@ -168,7 +168,7 @@ RooUnfoldSvd::Unfold()
   TH1D* rechist= _svd->Unfold (_kreg);
 
   _rec.ResizeTo (_nt);
-  for (Int_t i= 0; i<_nt; i++) {
+  for (int i= 0; i<_nt; i++) {
     _rec[i]= rechist->GetBinContent(i+1);
   }
 
@@ -183,12 +183,12 @@ void
 RooUnfoldSvd::GetCov()
 {
   if (!_svd) return;
-  Bool_t oldstat= TH1::AddDirectoryStatus();
+  bool oldstat= TH1::AddDirectoryStatus();
   TH1::AddDirectory (kFALSE);
   TH2D* meascov= new TH2D ("meascov", "meascov", _nb, 0.0, 1.0, _nb, 0.0, 1.0);
   const TMatrixD& cov= GetMeasuredCov();
-  for (Int_t i= 0; i<_nm; i++)
-    for (Int_t j= 0; j<_nm; j++)
+  for (int i= 0; i<_nm; i++)
+    for (int j= 0; j<_nm; j++)
       meascov->SetBinContent (i+1, j+1, cov(i,j));
 
   //Get the covariance matrix for statistical uncertainties on the measured distribution
@@ -197,8 +197,8 @@ RooUnfoldSvd::GetCov()
   TH2D* adetCov=     _svd->GetAdetCovMatrix   (_ntoyssvd);
 
   _cov.ResizeTo (_nt, _nt);
-  for (Int_t i= 0; i<_nt; i++) {
-    for (Int_t j= 0; j<_nt; j++) {
+  for (int i= 0; i<_nt; i++) {
+    for (int j= 0; j<_nt; j++) {
       _cov(i,j)= unfoldedCov->GetBinContent(i+1,j+1) + adetCov->GetBinContent(i+1,j+1);
     }
   }
@@ -225,7 +225,7 @@ void RooUnfoldSvd::Streamer (TBuffer &R__b)
   if (R__b.IsReading()) {
     // Don't add our histograms to the currect directory.
     // We own them and we don't want them to disappear when the file is closed.
-    Bool_t oldstat= TH1::AddDirectoryStatus();
+    bool oldstat= TH1::AddDirectoryStatus();
     TH1::AddDirectory (kFALSE);
     RooUnfoldSvd::Class()->ReadBuffer  (R__b, this);
     TH1::AddDirectory (oldstat);

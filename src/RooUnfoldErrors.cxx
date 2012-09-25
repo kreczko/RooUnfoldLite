@@ -30,7 +30,10 @@ difficult to invert reliably. A warning will be displayed if this is the case. T
 END_HTML */
 /////////////////////////////////////////////////////////////////
 
-#include "RooUnfoldErrors.h"
+#include "../interface/RooUnfold.h"
+#include "../interface/RooUnfoldErrors.h"
+#include "../interface/RooUnfoldResponse.h"
+#include "../interface/RooUnfoldResponse.h"
 
 #include <iostream>
 #include <cmath>
@@ -42,9 +45,6 @@ END_HTML */
 #include "TNtuple.h"
 #include "TAxis.h"
 
-#include "RooUnfoldResponse.h"
-#include "RooUnfold.h"
-#include "RooUnfoldResponse.h"
 
 using std::cout;
 using std::cerr;
@@ -125,7 +125,7 @@ RooUnfoldErrors::CreatePlots()
 {
     /*Gets the values for plotting. Compares unfolding errors with errors calculated from toy MC.*/
 
-    Bool_t oldstat= TH1::AddDirectoryStatus();
+    bool oldstat= TH1::AddDirectoryStatus();
     TH1::AddDirectory (kFALSE);
     h_err     = new TH1D ("unferr", "Unfolding errors", ntx, xlo, xhi); 
     h_err_res = new TH1D ("toyerr", "Toy MC RMS",       ntx, xlo, xhi); 
@@ -148,9 +148,9 @@ RooUnfoldErrors::CreatePlotsWithChi2()
     /*Gets the values for plotting. Uses the Runtoy method from RooUnfold to get plots to analyse for
     spread and error on the unfolding. Can also give values for a chi squared plot if a truth distribution is known*/
 
-    const Double_t maxchi2=1e10;
+    const double maxchi2=1e10;
 
-    Bool_t oldstat= TH1::AddDirectoryStatus();
+    bool oldstat= TH1::AddDirectoryStatus();
     TH1::AddDirectory (kFALSE);
 
     h_err     = new TProfile ("unferr", "Unfolding errors", ntx, xlo, xhi); 
@@ -168,7 +168,7 @@ RooUnfoldErrors::CreatePlotsWithChi2()
     int odd_ch=0;
     for (int k=0; k<toys;k++){  
         RooUnfold* toy= unfold->RunToy();
-        Double_t chi2=        toy->Chi2 (hTrue);
+        double chi2=        toy->Chi2 (hTrue);
         const TVectorD& reco= toy->Vreco();
         const TVectorD& err=  toy->ErecoV();
         for (int i=0; i<ntx; i++) {    
@@ -186,9 +186,9 @@ RooUnfoldErrors::CreatePlotsWithChi2()
     }
     for (int i=0; i<ntx; i++){
       TH1D* graph= graph_vector[i];
-        Double_t n= graph->GetEntries();
+        double n= graph->GetEntries();
         if (n<=0.0) continue;
-        Double_t spr= graph->GetRMS();
+        double spr= graph->GetRMS();
         h_err_res->SetBinContent (i+1, spr);
         h_err_res->SetBinError   (i+1, spr/sqrt(2*n));
         delete graph;

@@ -68,7 +68,7 @@ End_Html */
 
 #include <iostream>
 
-#include "TSVDUnfold_local.h"
+#include "../interface/TSVDUnfold_local.h"
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TDecompSVD.h"
@@ -148,7 +148,7 @@ TSVDUnfold::~TSVDUnfold()
 }
 
 //_______________________________________________________________________
-TH1D* TSVDUnfold::Unfold( Int_t kreg )
+TH1D* TSVDUnfold::Unfold( int kreg )
 {
    // Perform the unfolding   
    fKReg = kreg;
@@ -160,8 +160,8 @@ TH1D* TSVDUnfold::Unfold( Int_t kreg )
    TVectorD vb(fNdim), vbini(fNdim), vxini(fNdim), vberr(fNdim);
    TMatrixD mA(fNdim, fNdim), mCurv(fNdim, fNdim), mC(fNdim, fNdim);
 
-   Double_t eps = 1e-12;
-   Double_t sreg;
+   double eps = 1e-12;
+   double sreg;
 
    // Copy histogams entries into vector
    if (fToyMode) { H2V( fToyhisto, vb ); H2Verr( fToyhisto, vberr ); }
@@ -173,7 +173,7 @@ TH1D* TSVDUnfold::Unfold( Int_t kreg )
    else        H2M( fAdet,   mA );
 
    // Scale the MC vectors to data norm
-   Double_t scale = vb.Sum()/vbini.Sum();
+   double scale = vb.Sum()/vbini.Sum();
    vbini *= scale;
    vxini *= scale;
    mA    *= scale;
@@ -188,7 +188,7 @@ TH1D* TSVDUnfold::Unfold( Int_t kreg )
    TVectorD CSV   = CSVD.GetSig();
 
    TMatrixD CSVM(fNdim, fNdim);
-   for (Int_t i=0; i<fNdim; i++) CSVM(i,i) = 1/CSV(i);
+   for (int i=0; i<fNdim; i++) CSVM(i,i) = 1/CSV(i);
 
    CUort.Transpose( CUort );
    TMatrixD mCinv = (CVort*CSVM)*CUort;
@@ -220,13 +220,13 @@ TH1D* TSVDUnfold::Unfold( Int_t kreg )
    }
 
    // Damping coefficient
-   Int_t k = GetKReg()-1; 
+   int k = GetKReg()-1; 
 
    TVectorD vx(fNdim); // Return variable
 
    // Damping factors
    TVectorD vdz(fNdim);
-   for (Int_t i=0; i<fNdim; i++) {
+   for (int i=0; i<fNdim; i++) {
      if (ASV(i)<ASV(0)*eps) sreg = ASV(0)*eps;
      else                   sreg = ASV(i);
      vdz(i) = sreg/(sreg*sreg + ASV(k)*ASV(k));
@@ -261,7 +261,7 @@ TH1D* TSVDUnfold::Unfold( Int_t kreg )
 }
 
 //_______________________________________________________________________
-TH2D* TSVDUnfold::GetUnfoldCovMatrix( const TH2D* cov, Int_t ntoys, Int_t seed )
+TH2D* TSVDUnfold::GetUnfoldCovMatrix( const TH2D* cov, int ntoys, int seed )
 {
 
    fToyMode = true;
@@ -276,18 +276,18 @@ TH2D* TSVDUnfold::GetUnfoldCovMatrix( const TH2D* cov, Int_t ntoys, Int_t seed )
    // gives Lt*L = C, where Lt is the transpose of L (the "square-root method")  
    TMatrixD L(fNdim,fNdim); L *= 0;
 
-   for (Int_t iPar= 0; iPar < fNdim; iPar++) {
+   for (int iPar= 0; iPar < fNdim; iPar++) {
 
       // Calculate the diagonal term first
       L(iPar,iPar) = cov->GetBinContent(iPar+1,iPar+1);
-      for (Int_t k=0; k<iPar; k++) L(iPar,iPar) -= TMath::Power( L(k,iPar), 2 );
+      for (int k=0; k<iPar; k++) L(iPar,iPar) -= TMath::Power( L(k,iPar), 2 );
       if (L(iPar,iPar) > 0.0) L(iPar,iPar) = TMath::Sqrt(L(iPar,iPar));
       else                    L(iPar,iPar) = 0.0;
 
       // ...then the off-diagonal terms
-      for (Int_t jPar=iPar+1; jPar<fNdim; jPar++) {
+      for (int jPar=iPar+1; jPar<fNdim; jPar++) {
          L(iPar,jPar) = cov->GetBinContent(iPar+1,jPar+1);
-         for (Int_t k=0; k<iPar; k++) L(iPar,jPar) -= L(k,iPar)*L(k,jPar);
+         for (int k=0; k<iPar; k++) L(iPar,jPar) -= L(k,iPar)*L(k,jPar);
          if (L(iPar,iPar)!=0.) L(iPar,jPar) /= L(iPar,iPar);
          else                  L(iPar,jPar) = 0;
       }
@@ -299,14 +299,14 @@ TH2D* TSVDUnfold::GetUnfoldCovMatrix( const TH2D* cov, Int_t ntoys, Int_t seed )
 
    fToyhisto = (TH1D*)fBdat->Clone("toyhisto");
    TH1D *toymean = (TH1D*)fBdat->Clone("toymean");
-   for (Int_t j=1; j<=fNdim; j++) toymean->SetBinContent(j,0.);
+   for (int j=1; j<=fNdim; j++) toymean->SetBinContent(j,0.);
 
    // Get the mean of the toys first
    for (int i=1; i<=ntoys; i++) {
 
       // create a vector of unit Gaussian variables
       TVectorD g(fNdim);
-      for (Int_t k= 0; k < fNdim; k++) g(k) = random.Gaus(0.,1.);
+      for (int k= 0; k < fNdim; k++) g(k) = random.Gaus(0.,1.);
 
       // Multiply this vector by Lt to introduce the appropriate correlations
       g *= (*Lt);
@@ -319,7 +319,7 @@ TH2D* TSVDUnfold::GetUnfoldCovMatrix( const TH2D* cov, Int_t ntoys, Int_t seed )
 
       unfres = Unfold(GetKReg());
 
-      for (Int_t j=1; j<=fNdim; j++) {
+      for (int j=1; j<=fNdim; j++) {
          toymean->SetBinContent(j, toymean->GetBinContent(j) + unfres->GetBinContent(j)/ntoys);
       }
    }
@@ -332,7 +332,7 @@ TH2D* TSVDUnfold::GetUnfoldCovMatrix( const TH2D* cov, Int_t ntoys, Int_t seed )
 
       // Create a vector of unit Gaussian variables
       TVectorD g(fNdim);
-      for (Int_t k= 0; k < fNdim; k++) g(k) = random.Gaus(0.,1.);
+      for (int k= 0; k < fNdim; k++) g(k) = random.Gaus(0.,1.);
 
       // Multiply this vector by Lt to introduce the appropriate correlations
       g *= (*Lt);
@@ -344,8 +344,8 @@ TH2D* TSVDUnfold::GetUnfoldCovMatrix( const TH2D* cov, Int_t ntoys, Int_t seed )
       }
       unfres = Unfold(GetKReg());
 
-      for (Int_t j=1; j<=fNdim; j++) {
-         for (Int_t k=1; k<=fNdim; k++) {
+      for (int j=1; j<=fNdim; j++) {
+         for (int k=1; k<=fNdim; k++) {
             unfcov->SetBinContent(j,k,unfcov->GetBinContent(j,k) + ( (unfres->GetBinContent(j) - toymean->GetBinContent(j))* (unfres->GetBinContent(k) - toymean->GetBinContent(k))/(ntoys-1)) );
          }
       }
@@ -358,7 +358,7 @@ TH2D* TSVDUnfold::GetUnfoldCovMatrix( const TH2D* cov, Int_t ntoys, Int_t seed )
 }
 
 //_______________________________________________________________________
-TH2D* TSVDUnfold::GetAdetCovMatrix( Int_t ntoys, Int_t seed )
+TH2D* TSVDUnfold::GetAdetCovMatrix( int ntoys, int seed )
 {
 
    fMatToyMode = true;
@@ -373,11 +373,11 @@ TH2D* TSVDUnfold::GetAdetCovMatrix( Int_t ntoys, Int_t seed )
 
    fToymat = (TH2D*)fAdet->Clone("toymat");
    TH1D *toymean = (TH1D*)fXini->Clone("toymean");
-   for (Int_t j=1; j<=fNdim; j++) toymean->SetBinContent(j,0.);
+   for (int j=1; j<=fNdim; j++) toymean->SetBinContent(j,0.);
 
    for (int i=1; i<=ntoys; i++) {    
-      for (Int_t k=1; k<=fNdim; k++) {
-         for (Int_t m=1; m<=fNdim; m++) {
+      for (int k=1; k<=fNdim; k++) {
+         for (int m=1; m<=fNdim; m++) {
             if (fAdet->GetBinContent(k,m)) {
                fToymat->SetBinContent(k, m, random.Poisson(fAdet->GetBinContent(k,m)));
             }
@@ -386,7 +386,7 @@ TH2D* TSVDUnfold::GetAdetCovMatrix( Int_t ntoys, Int_t seed )
 
       unfres = Unfold(GetKReg());
 
-      for (Int_t j=1; j<=fNdim; j++) {
+      for (int j=1; j<=fNdim; j++) {
          toymean->SetBinContent(j, toymean->GetBinContent(j) + unfres->GetBinContent(j)/ntoys);
       }
    }
@@ -395,8 +395,8 @@ TH2D* TSVDUnfold::GetAdetCovMatrix( Int_t ntoys, Int_t seed )
    random.SetSeed(seed);
 
    for (int i=1; i<=ntoys; i++) {
-      for (Int_t k=1; k<=fNdim; k++) {
-         for (Int_t m=1; m<=fNdim; m++) {
+      for (int k=1; k<=fNdim; k++) {
+         for (int m=1; m<=fNdim; m++) {
             if (fAdet->GetBinContent(k,m))
                fToymat->SetBinContent(k, m, random.Poisson(fAdet->GetBinContent(k,m)));
          }
@@ -404,8 +404,8 @@ TH2D* TSVDUnfold::GetAdetCovMatrix( Int_t ntoys, Int_t seed )
 
       unfres = Unfold(GetKReg());
 
-      for (Int_t j=1; j<=fNdim; j++) {
-         for (Int_t k=1; k<=fNdim; k++) {
+      for (int j=1; j<=fNdim; j++) {
+         for (int k=1; k<=fNdim; k++) {
             unfcov->SetBinContent(j,k,unfcov->GetBinContent(j,k) + ( (unfres->GetBinContent(j) - toymean->GetBinContent(j))*(unfres->GetBinContent(k) - toymean->GetBinContent(k))/(ntoys-1)) );
          }
       }
@@ -437,40 +437,40 @@ TH1D* TSVDUnfold::GetSV() const
 void TSVDUnfold::H2V( const TH1D* histo, TVectorD& vec )
 {
    // Fill 1D histogram into vector
-   for (Int_t i=0; i<histo->GetNbinsX(); i++) vec(i) = histo->GetBinContent(i+1);
+   for (int i=0; i<histo->GetNbinsX(); i++) vec(i) = histo->GetBinContent(i+1);
 }
 
 //_______________________________________________________________________
 void TSVDUnfold::H2Verr( const TH1D* histo, TVectorD& vec )
 {
    // Fill 1D histogram errors into vector
-   for (Int_t i=0; i<histo->GetNbinsX(); i++) vec(i) = histo->GetBinError(i+1);
+   for (int i=0; i<histo->GetNbinsX(); i++) vec(i) = histo->GetBinError(i+1);
 }
 
 //_______________________________________________________________________
 void TSVDUnfold::V2H( const TVectorD& vec, TH1D& histo )
 {
    // Fill vector into 1D histogram
-   for(Int_t i=0; i<vec.GetNrows(); i++) histo.SetBinContent(i+1, vec(i));
+   for(int i=0; i<vec.GetNrows(); i++) histo.SetBinContent(i+1, vec(i));
 }
 
 //_______________________________________________________________________
 void TSVDUnfold::H2M( const TH2D* histo, TMatrixD& mat )
 {
    // Fill 2D histogram into matrix
-   for (Int_t j=0; j<histo->GetNbinsX(); j++) {
-      for (Int_t i=0; i<histo->GetNbinsY(); i++) {
+   for (int j=0; j<histo->GetNbinsX(); j++) {
+      for (int i=0; i<histo->GetNbinsY(); i++) {
          mat(i,j) = histo->GetBinContent(i+1,j+1);
       }
    }
 }
 
 //_______________________________________________________________________
-TVectorD TSVDUnfold::VecDiv( const TVectorD& vec1, const TVectorD& vec2, Int_t zero )
+TVectorD TSVDUnfold::VecDiv( const TVectorD& vec1, const TVectorD& vec2, int zero )
 {
    // Divide entries of two vectors
    TVectorD quot(vec1.GetNrows());
-   for (Int_t i=0; i<vec1.GetNrows(); i++) {
+   for (int i=0; i<vec1.GetNrows(); i++) {
       if (vec2(i) != 0) quot(i) = vec1(i) / vec2(i);
       else {
          if   (zero) quot(i) = 0;
@@ -481,12 +481,12 @@ TVectorD TSVDUnfold::VecDiv( const TVectorD& vec1, const TVectorD& vec2, Int_t z
 }
 
 //_______________________________________________________________________
-TMatrixD TSVDUnfold::MatDivVec( const TMatrixD& mat, const TVectorD& vec, Int_t zero )
+TMatrixD TSVDUnfold::MatDivVec( const TMatrixD& mat, const TVectorD& vec, int zero )
 {
    // Divide matrix entries by vector
    TMatrixD quotmat(mat.GetNrows(), mat.GetNcols());
-   for (Int_t i=0; i<mat.GetNrows(); i++) {
-      for (Int_t j=0; j<mat.GetNcols(); j++) {
+   for (int i=0; i<mat.GetNrows(); i++) {
+      for (int j=0; j<mat.GetNcols(); j++) {
          if (vec(i) != 0) quotmat(i,j) = mat(i,j) / vec(i);
          else {
             if   (zero) quotmat(i,j) = 0;
@@ -502,12 +502,12 @@ TVectorD TSVDUnfold::CompProd( const TVectorD& vec1, const TVectorD& vec2 )
 {
    // Multiply entries of two vectors
    TVectorD res(vec1.GetNrows());
-   for (Int_t i=0; i<vec1.GetNrows(); i++) res(i) = vec1(i) * vec2(i);
+   for (int i=0; i<vec1.GetNrows(); i++) res(i) = vec1(i) * vec2(i);
    return res;
 }
 
 //_______________________________________________________________________
-Double_t TSVDUnfold::GetCurvature(const TVectorD& vec, const TMatrixD& curv) 
+double TSVDUnfold::GetCurvature(const TVectorD& vec, const TMatrixD& curv) 
 {      
    // Compute curvature of vector
    return vec*(curv*vec);
@@ -516,23 +516,23 @@ Double_t TSVDUnfold::GetCurvature(const TVectorD& vec, const TMatrixD& curv)
 //_______________________________________________________________________
 void TSVDUnfold::FillCurvatureMatrix( TMatrixD& tCurv, TMatrixD& tC ) const
 {
-   Double_t eps = 0.00001;
+   double eps = 0.00001;
 
-   Int_t ndim = tCurv.GetNrows();
+   int ndim = tCurv.GetNrows();
 
    // Init
    tCurv *= 0;
    tC    *= 0;
 
-   if (fDdim == 0) for (Int_t i=0; i<ndim; i++) tC(i,i) = 1;
+   if (fDdim == 0) for (int i=0; i<ndim; i++) tC(i,i) = 1;
    else if (ndim == 1) {
-      for (Int_t i=0; i<ndim; i++) {
+      for (int i=0; i<ndim; i++) {
          if (i < ndim-1) tC(i,i+1) = 1.0;
          tC(i,i) = 1.0;
       }
    }
    else if (fDdim == 2) {
-      for (Int_t i=0; i<ndim; i++) {
+      for (int i=0; i<ndim; i++) {
          if (i > 0)      tC(i,i-1) = 1.0;
          if (i < ndim-1) tC(i,i+1) = 1.0;
          tC(i,i) = -2.0;
@@ -541,7 +541,7 @@ void TSVDUnfold::FillCurvatureMatrix( TMatrixD& tCurv, TMatrixD& tC ) const
       tC(ndim-1,ndim-1) = -1.0;
    }
    else if (fDdim == 3) {
-      for (Int_t i=1; i<ndim-2; i++) {
+      for (int i=1; i<ndim-2; i++) {
          tC(i,i-1) =  1.0;
          tC(i,i)   = -3.0;
          tC(i,i+1) =  3.0;
@@ -549,7 +549,7 @@ void TSVDUnfold::FillCurvatureMatrix( TMatrixD& tCurv, TMatrixD& tC ) const
       }
    }
    else if (fDdim==4) {
-      for (Int_t i=0; i<ndim; i++) {
+      for (int i=0; i<ndim; i++) {
          if (i > 0)      tC(i,i-1) = -4.0;
          if (i < ndim-1) tC(i,i+1) = -4.0;
          if (i > 1)      tC(i,i-2) =  1.0;
@@ -566,7 +566,7 @@ void TSVDUnfold::FillCurvatureMatrix( TMatrixD& tCurv, TMatrixD& tC ) const
       tC(ndim-2,ndim-2) =  6.0;
    }
    else if (fDdim == 5) {
-      for (Int_t i=2; i < ndim-3; i++) {
+      for (int i=2; i < ndim-3; i++) {
          tC(i,i-2) = 1.0;
          tC(i,i-1) = -5.0;
          tC(i,i)   = 10.0;
@@ -576,7 +576,7 @@ void TSVDUnfold::FillCurvatureMatrix( TMatrixD& tCurv, TMatrixD& tC ) const
       }
    }
    else if (fDdim == 6) {
-      for (Int_t i = 3; i < ndim - 3; i++) {
+      for (int i = 3; i < ndim - 3; i++) {
          tC(i,i-3) = 1.0;
          tC(i,i-2) = -6.0;
          tC(i,i-1) = 15.0;
@@ -588,12 +588,12 @@ void TSVDUnfold::FillCurvatureMatrix( TMatrixD& tCurv, TMatrixD& tC ) const
    }
 
    // Add epsilon to avoid singularities
-   for (Int_t i=0; i<ndim; i++) tC(i,i) = tC(i,i) + eps;
+   for (int i=0; i<ndim; i++) tC(i,i) = tC(i,i) + eps;
 
    //Get curvature matrix
-   for (Int_t i=0; i<ndim; i++) {
-      for (Int_t j=0; j<ndim; j++) {
-         for (Int_t k=0; k<ndim; k++) {
+   for (int i=0; i<ndim; i++) {
+      for (int j=0; j<ndim; j++) {
+         for (int k=0; k<ndim; k++) {
             tCurv(i,j) = tCurv(i,j) + tC(k,i)*tC(k,j);
          }
       }
@@ -612,22 +612,22 @@ void TSVDUnfold::InitHistos( )
 }
 
 //_______________________________________________________________________
-void TSVDUnfold::RegularisedSymMatInvert( TMatrixDSym& mat, Double_t eps )
+void TSVDUnfold::RegularisedSymMatInvert( TMatrixDSym& mat, double eps )
 {
    // naive regularised inversion cuts off small elements
 
    // init reduced matrix
-   const UInt_t n = mat.GetNrows();
-   UInt_t nn = 0;   
+   const unsigned int n = mat.GetNrows();
+   unsigned int nn = 0;
 
-   UInt_t *ipos = new UInt_t[n];
-   //   UInt_t ipos[n];
+   unsigned int *ipos = new unsigned int[n];
+   //   unsigned int ipos[n];
 
    // find max diagonal entries
-   Double_t ymax = 0;
-   for (UInt_t i=0; i<n; i++) if (TMath::Abs(mat[i][i]) > ymax) ymax = TMath::Abs(mat[i][i]);
+   double ymax = 0;
+   for (unsigned int i=0; i<n; i++) if (TMath::Abs(mat[i][i]) > ymax) ymax = TMath::Abs(mat[i][i]);
 
-   for (UInt_t i=0; i<n; i++) {
+   for (unsigned int i=0; i<n; i++) {
 
          // save position of accepted entries
       if (TMath::Abs(mat[i][i])/ymax > eps) ipos[nn++] = i;
@@ -635,13 +635,13 @@ void TSVDUnfold::RegularisedSymMatInvert( TMatrixDSym& mat, Double_t eps )
 
    // effective matrix
    TMatrixDSym matwork( nn );
-   for (UInt_t in=0; in<nn; in++) for (UInt_t jn=0; jn<nn; jn++) matwork(in,jn) = 0;
+   for (unsigned int in=0; in<nn; in++) for (unsigned int jn=0; jn<nn; jn++) matwork(in,jn) = 0;
 
    // fill non-zero effective working matrix
-   for (UInt_t in=0; in<nn; in++) {
+   for (unsigned int in=0; in<nn; in++) {
 
       matwork[in][in] = mat[ipos[in]][ipos[in]];
-      for (UInt_t jn=in+1; jn<nn; jn++) {
+      for (unsigned int jn=in+1; jn<nn; jn++) {
          matwork[in][jn] = mat[ipos[in]][ipos[jn]];
          matwork[jn][in] = matwork[in][jn];
       }
@@ -651,12 +651,12 @@ void TSVDUnfold::RegularisedSymMatInvert( TMatrixDSym& mat, Double_t eps )
    matwork.Invert();
 
    // reinitialise old matrix
-   for (UInt_t i=0; i<n; i++) for (UInt_t j=0; j<n; j++) mat[i][j] = 0;
+   for (unsigned int i=0; i<n; i++) for (unsigned int j=0; j<n; j++) mat[i][j] = 0;
 
    // refill inverted matrix in old one
-   for (UInt_t in=0; in<nn; in++) {
+   for (unsigned int in=0; in<nn; in++) {
       mat[ipos[in]][ipos[in]] = matwork[in][in];
-      for (UInt_t jn=in+1; jn<nn; jn++) {
+      for (unsigned int jn=in+1; jn<nn; jn++) {
          mat[ipos[in]][ipos[jn]] = matwork[in][jn];
          mat[ipos[jn]][ipos[in]] = mat[ipos[in]][ipos[jn]];
       }
@@ -665,13 +665,13 @@ void TSVDUnfold::RegularisedSymMatInvert( TMatrixDSym& mat, Double_t eps )
 }
 
 //_______________________________________________________________________
-Double_t TSVDUnfold::ComputeChiSquared( const TH1D& truspec, const TH1D& unfspec, const TH2D& covmat, Double_t regpar  )
+double TSVDUnfold::ComputeChiSquared( const TH1D& truspec, const TH1D& unfspec, const TH2D& covmat, double regpar  )
 {
    // helper routine to compute chi-squared between distributions
-   UInt_t n = truspec.GetNbinsX();
+   unsigned int n = truspec.GetNbinsX();
    TMatrixDSym mat( n );
-   for (UInt_t i=0; i<n; i++) {
-      for (UInt_t j=i; j<n; j++) {
+   for (unsigned int i=0; i<n; i++) {
+      for (unsigned int j=i; j<n; j++) {
          mat[i][j] = covmat.GetBinContent( i+1, j+1 );
          mat[j][i] = mat[i][j];
       }
@@ -680,9 +680,9 @@ Double_t TSVDUnfold::ComputeChiSquared( const TH1D& truspec, const TH1D& unfspec
    RegularisedSymMatInvert( mat, regpar );
 
    // compute chi2
-   Double_t chi2 = 0;
-   for (UInt_t i=0; i<n; i++) {
-      for (UInt_t j=0; j<n; j++) {
+   double chi2 = 0;
+   for (unsigned int i=0; i<n; i++) {
+      for (unsigned int j=0; j<n; j++) {
          chi2 += ( (truspec.GetBinContent( i+1 )-unfspec.GetBinContent( i+1 )) *
                    (truspec.GetBinContent( j+1 )-unfspec.GetBinContent( j+1 )) * mat[i][j] );
       }
